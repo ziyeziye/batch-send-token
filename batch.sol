@@ -40,7 +40,7 @@ contract BatchTransfer {
         address[] memory _to,
         uint256[] memory _value
     ) public {
-        for (uint8 i = 1; i < _to.length; i++) {
+        for (uint8 i = 0; i < _to.length; i++) {
             TransferHelper.safeTransferFrom(
                 _token,
                 msg.sender,

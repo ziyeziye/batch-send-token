@@ -198,7 +198,7 @@
             97: {
                 network: "Binance Smart Chain Testnet",
                 symbol: "TBNB",
-                batchAddress: "0x41dD7234671B5362dA2D60461D77D128EC3628Da",
+                batchAddress: "0x178Ce01594C9418A41626066B9fB90E7Ae514A64",
                 tokenAddress: "0x47A01F129b9c95E63a50a6aa6cBaFDD96bEb4C6F",
             }
         };
@@ -211,7 +211,7 @@
         const batchAbi = [{ "inputs": [{ "internalType": "address", "name": "_token", "type": "address" }, { "internalType": "address[]", "name": "_to", "type": "address[]" }, { "internalType": "uint256[]", "name": "_value", "type": "uint256[]" }], "name": "transferToken", "outputs": [], "stateMutability": "nonpayable", "type": "function" }];
     </script>
 
-    <!-- helper库 -->
+    <!-- helper库请不要修改 -->
     <script>
         const helper = {
             storage: {
@@ -333,7 +333,7 @@
                         items.forEach(item => {
                             this.totalCny += item.amount / 1;
                         });
-                        this.totalUsdt = this.totalCny / usdRate;
+                        this.totalUsdt = this.totalCny / this.usdRate;
                         helper.storage.set("sendUsers", items);
                     },
                     deep: true
@@ -464,11 +464,10 @@
                         if (item.amount > 0) {
                             users.push(item.address);
                             let amount = ethers.utils.parseUnits((item.amount / this.usdRate).toString(), this.tokenInfo.decimals);
-                            amounts.push(amount);
+                            amounts.push(amount.toString());
 
                             cnyCount += item.amount / 1;
                             usdtCount += amount / 1;
-                            console.log(amount.toString());
                         }
                     })
                     if (users.length != amounts.length) {
@@ -485,9 +484,9 @@
                     if (r != true) {
                         return;
                     }
-                    // this.tokenContract approve
-                    const contract = new ethers.Contract(this.networkInfo.tokenAddress, batchAbi, this.signer);
+                    const contract = new ethers.Contract(this.networkInfo.batchAddress, batchAbi, this.signer);
                     let tx = await contract.transferToken(this.networkInfo.tokenAddress, users, amounts);
+
                     await tx.wait();
                 },
             },

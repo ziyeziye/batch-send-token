@@ -119,7 +119,9 @@
                                 <tbody>
                                     <tr v-for="(item, key) in sendUsers" :key="key">
                                         <td>{{key+1}}</td>
-                                        <td>{{item.address}}</td>
+                                        <td>
+                                            {{item.address}}
+                                        </td>
                                         <td>
                                             <input class="input is-small" required v-model="item.amount" />
                                         </td>
@@ -186,7 +188,7 @@
             56: {
                 network: "Binance Smart Chain Mainnet",
                 symbol: "BNB",
-                batchAddress: "0x0000000000000000000000000000000000000000",
+                batchAddress: "0x48814EcE702659cD5042B14EB6CD9C5d1E1C04D2",
                 tokenAddress: "0x55d398326f99059fF775485246999027B3197955",
             },
             20181205: {
@@ -463,11 +465,12 @@
                     this.sendUsers.forEach(item => {
                         if (item.amount > 0) {
                             users.push(item.address);
-                            let amount = ethers.utils.parseUnits((item.amount / this.usdRate).toString(), this.tokenInfo.decimals);
-                            amounts.push(amount.toString());
+                            let usd = item.amount / this.usdRate;
+                            let amount = ethers.utils.parseUnits(usd.toString(), this.tokenInfo.decimals);
+                            amounts.push(amount);
 
                             cnyCount += item.amount / 1;
-                            usdtCount += amount / 1;
+                            usdtCount += usd;
                         }
                     })
                     if (users.length != amounts.length) {
@@ -475,7 +478,6 @@
                         return
                     }
 
-                    usdtCount = ethers.utils.formatUnits(usdtCount.toString(), this.tokenInfo.decimals)
                     var r = confirm(`请确认数据:\n
                     共计${users.length}个地址\n
                     共计${cnyCount}元\n

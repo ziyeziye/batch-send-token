@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>USDT批量转账</title>
+    <link rel="stylesheet" href="https://unpkg.com/bulma@0.9.4/css/bulma.min.css" />
+</head>
+
+<body>
+    <div id="app">
+        <!-- <section class="hero is-info">
+            <div class="hero-body">
+                <p class="title">
+                    USDT批量转账
+                </p>
+            </div>
+        </section> -->
+        <article class="message is-small is-info">
+            <div class="message-header">
+                <p> USDT批量转账 注意事项</p>
+            </div>
+            <div class="message-body content is-small">
+                <ol>
+                    <li>使用合约批量转账, 支持ERC20代币,不支持主网币</li>
+                    <li>数据存在本地,不支持永久存储</li>
+                    <li>转账前请先核对并修改汇率, 仔细核对表格统计数据</li>
+                </ol>
+            </div>
+        </article>
+
+        <div class="section" style="padding-top: 0;">
+            <div class="columns">
+                <div class="column is-full-mobile is-one-third-tablet is-one-third-desktop">
+                    <div class="box">
+
+                        <div class="field">
+                            <label class="label is-small">汇率 [ 1 USDT : {{usdRate}} CNY ]</label>
+                            <div class="control">
+                                <input class="input is-small" type="text" v-model="usdRate" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label is-small">主网配置</label>
+                            <div class="control">
+                                <input class="input is-small" placeholder="请连接钱包..." disabled type="text"
+                                    v-model="networkInfo.network" />
+                            </div>
+                        </div>
+
+                        <article class="message is-small is-light">
+                            <div class="message-body content is-small">
+                                <p>ChainID: {{ chainId }}</p>
+                                <p>转账合约地址: {{ networkInfo.batchAddress }}</p>
+                                <p>钱包地址: {{ address }}</p>
+                                <p>{{networkInfo.symbol}}余额: {{ balance }}</p>
+
+                                <p>Token合约地址: {{ networkInfo.tokenAddress }}</p>
+                                <p>Symbol: {{ tokenInfo.symbol }}</p>
+                                <p>精度: {{ tokenInfo.decimals }}</p>
+                                <p class="is-clipped" :title="tokenInfo.balance">Token余额: {{ tokenInfo.balance }}
+                                </p>
+                            </div>
+                        </article>
+
+                    </div>
+                </div>
+
+                <div class="column is-full-mobile is-two-thirds-tablet is-two-thirds-desktop">
+                    <div class="box">
+
+                        <div class="columns">
+                            <div class="column">
+                                <button class="button is-small is-info" @click="clickAddUser">
+                                    新增地址
+                                </button>
+                            </div>
+                            <div class="column">
+                                <button class="button is-small is-info" @click="approveToken">
+                                    授权{{tokenInfo.symbol}}
+                                </button>
+                            </div>
+                            <div class="column">
+                                <button class="button is-small is-info" @click="send">
+                                    确认转账
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="columns">
+                            <div class="column is-narrow">
+                                <div class="content is-small">
+                                    <p>共 {{sendUsers.length}} 个接收地址</p>
+                                </div>
+                            </div>
+
+                            <div class="column is-narrow">
+                                <div class="content is-small">
+                                    <p>共 <span class="has-text-danger">{{totalCny}}</span> CNY,
+                                        <span class="has-text-danger">{{totalUsdt}}</span> USDT
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="table is-narrow is-striped is-bordered is-fullwidth">
+                                <thead>
+                                    <tr>
+                                        <th>序号</th>
+                                        <th>接收地址</th>
+                                        <th>价值/CNY</th>
+                                        <th>数量</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, key) in sendUsers" :key="key">
+                                        <td>{{key+1}}</td>
+                                        <td>{{item.address}}</td>
+                                        <td>
+                                            <input class="input is-small" required v-model="item.amount" />
+                                        </td>
+                                        <td>
+                                            <input class="input is-small" disabled :value="item.amount/usdRate" />
+                                        </td>
+                                        <td>
+                                            <button class="delete" @click="delUser(key)"></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="modal" v-bind:class="{ 'is-active': isAddActive }">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+                <header class="modal-card-head">
+                    <p class="modal-card-title">新增地址</p>
+                    <button class="delete" aria-label="close" @click="clickAddUser"></button>
+                </header>
+                <section class="modal-card-body">
+                    <div class="field">
+                        <label class="label">金额 ¥</label>
+                        <div class="control">
+                            <input class="input" type="number" placeholder="1000" v-model="sendAmount">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label is-small">钱包地址</label>
+                        <div class="control">
+                            <textarea v-model="addUsersList" class="textarea is-small" placeholder="一行一个
+0x31a126...
+0x31a127..."></textarea>
+                        </div>
+                    </div>
+
+                </section>
+                <footer class="modal-card-foot">
+                    <button class="button is-success" @click="saveUsers">保存</button>
+                    <button class="button" @click="clickAddUser">取消</button>
+                </footer>
+            </div>
+        </div>
+
+    </div>
+    <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+    <!-- <script src="https://unpkg.com/vue@2/dist/vue.min.js"></script> -->
+    <script src="https://unpkg.com/ethers@latest/dist/ethers.umd.min.js"></script>
+    <!-- <script src=" https://unpkg.com/ethers-multicall@latest"></script> -->
+
+    <!-- 基础配置,可以按需求修改调整 -->
+    <script>
+        const usdRate = 6.7; //默认汇率
+        const networkConfigs = {
+            56: {
+                network: "Binance Smart Chain Mainnet",
+                symbol: "BNB",
+                batchAddress: "0x0000000000000000000000000000000000000000",
+                tokenAddress: "0x55d398326f99059fF775485246999027B3197955",
+            },
+            20181205: {
+                network: "Quarkblock Chain",
+                symbol: "QKI",
+                batchAddress: "0x0000000000000000000000000000000000000000",
+                tokenAddress: "0xDF0e293CC3c7bA051763FF6b026DA0853D446E38",
+            },
+            97: {
+                network: "Binance Smart Chain Testnet",
+                symbol: "TBNB",
+                batchAddress: "0x41dD7234671B5362dA2D60461D77D128EC3628Da",
+                tokenAddress: "0x47A01F129b9c95E63a50a6aa6cBaFDD96bEb4C6F",
+            }
+        };
+    </script>
+
+    <!-- 常量请不要修改 -->
+    <script>
+        // ERC20 API
+        const abi = [{ "inputs": [{ "internalType": "string", "name": "name_", "type": "string" }, { "internalType": "string", "name": "symbol_", "type": "string" }], "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "owner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "spender", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" }], "name": "Approval", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "from", "type": "address" }, { "indexed": true, "internalType": "address", "name": "to", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" }], "name": "Transfer", "type": "event" }, { "inputs": [], "name": "name", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "symbol", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "decimals", "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "account", "type": "address" }], "name": "balanceOf", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "transfer", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "sender", "type": "address" }, { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "transferFrom", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "addedValue", "type": "uint256" }], "name": "increaseAllowance", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "subtractedValue", "type": "uint256" }], "name": "decreaseAllowance", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }];
+        const batchAbi = [{ "inputs": [{ "internalType": "address", "name": "_token", "type": "address" }, { "internalType": "address[]", "name": "_to", "type": "address[]" }, { "internalType": "uint256[]", "name": "_value", "type": "uint256[]" }], "name": "transferToken", "outputs": [], "stateMutability": "nonpayable", "type": "function" }];
+    </script>
+
+    <!-- helper库 -->
+    <script>
+        const helper = {
+            storage: {
+                // 存储
+                set(key, value) {
+                    localStorage.setItem(key, JSON.stringify(value))
+                },
+                // 取出
+                get(key) {
+                    const value = localStorage.getItem(key)
+                    if (value && value !== 'undefined' && value !== 'null') {
+                        return JSON.parse(value)
+                    }
+                    return null
+                },
+                // 删除
+                remove(key) {
+                    localStorage.removeItem(key)
+                }
+            },
+            session: {
+                // 存储
+                set(key, value) {
+                    window.sessionStorage.setItem(key, JSON.stringify(value))
+                },
+                // 取出
+                get(key) {
+                    const value = window.sessionStorage.getItem(key)
+                    if (value && value !== 'undefined' && value !== 'null') {
+                        return JSON.parse(value)
+                    }
+                    return null
+                },
+                // 删除
+                remove(key) {
+                    window.sessionStorage.removeItem(key)
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 逻辑 不需要修改 -->
+    <script>
+        let networkInfo = {
+            network: "",
+            symbol: "",
+            batchAddress: "",
+            tokenAddress: "",
+        };
+        let tokenInfo = {
+            balance: "0",
+            decimals: "",
+            symbol: "",
+        }
+
+        new Vue({
+            el: "#app",
+            data: {
+                //data
+                networkConfigs,
+                networkInfo,
+                tokenInfo,
+                usdRate,
+                isAddActive: false,
+                sendUsers: [],
+                totalCny: 0,
+                totalUsdt: 0,
+
+                //addUser model
+                addUsersList: "",
+                sendAmount: 0,
+
+                //Etherjs
+                address: "", //钱包地址
+                balance: "", //主网币
+                chainId: "",
+                signer: null,
+                provider: null,
+                tokenContract: null,
+            },
+            created: function () {
+                this.connectWallet();
+                let storageRate = helper.storage.get("usdRate");
+                if (storageRate != null) {
+                    this.usdRate = storageRate;
+                }
+
+                let storageUsers = helper.storage.get("sendUsers");
+                if (storageUsers != null) {
+                    this.sendUsers = storageUsers;
+                }
+            },
+            watch: {
+                async chainId(newV, oldV) {
+                    if (newV == oldV) {
+                        return;
+                    }
+
+                    if (!networkConfigs[newV]) {
+                        alert("不支持的主网");
+                        return
+                    }
+
+                    this.networkInfo = networkConfigs[newV];
+                    this.tokenInfo.address = networkConfigs[newV].tokenAddress;
+                    await this.getTokenInfo();
+                },
+                usdRate(newV, oldV) {
+                    if (newV == oldV) {
+                        return;
+                    }
+
+                    this.totalUsdt = this.totalCny / newV;
+                    helper.storage.set("usdRate", newV);
+                },
+                sendUsers: {
+                    handler(items) {
+                        this.totalCny = 0;
+                        items.forEach(item => {
+                            this.totalCny += item.amount / 1;
+                        });
+                        this.totalUsdt = this.totalCny / usdRate;
+                        helper.storage.set("sendUsers", items);
+                    },
+                    deep: true
+                },
+            },
+            methods: {
+                init() {
+                },
+                connectWallet() {
+                    if (typeof (window).ethereum !== 'undefined') {
+                        const provider = new ethers.providers.Web3Provider((window).ethereum)
+                        const signer = provider.getSigner()
+                        this.provider = provider
+                        this.signer = signer
+
+                        // this.ethcallProvider = new Provider(this.provider);
+                        // this.ethcallProvider.init();
+
+                        // 为了满足构造函数中可使用async/await
+                        const getChain = (async () => {
+                            if (window.ethereum.isMetaMask) {
+                                await (window).ethereum.send('eth_requestAccounts')
+                            }
+                            let chain = await this.provider.getNetwork();
+                            this.chainId = chain.chainId;
+
+                            const address = await this.signer.getAddress().then((res) => res).catch((error) => {
+                                console.log('catch=====', error)
+                            })
+                            this.address = address
+
+                            let balance = await this.signer.getBalance();
+                            this.balance = ethers.utils.formatEther(balance);
+
+                            // let _gasPrice = await this.getGasPrice()
+                            // console.log('gasprice', _gasPrice)
+                            // if (_gasPrice > MIN_GASPRICE)
+                            // this.gasPrice = _gasPrice;//如果网络当前矿工费高于预设最小值，使用当前值
+                            delete this.then
+                            return this
+                        })()
+                        this.then = getChain.then.bind(getChain)
+                    }
+                },
+                async getTokenInfo() {
+                    this.tokenInfo.decimals = "";
+                    this.tokenInfo.symbol = "";
+                    this.tokenInfo.balance = "";
+
+                    if (!ethers.utils.isAddress(this.networkInfo.tokenAddress)) {
+                        return;
+                    }
+
+                    if (!this.provider) {
+                        return;
+                    }
+                    this.tokenContract = new ethers.Contract(this.networkInfo.tokenAddress, abi, this.signer);
+                    this.tokenInfo.symbol = await this.tokenContract.symbol();
+                    this.tokenInfo.decimals = await this.tokenContract.decimals();
+                    let balance = await this.tokenContract.balanceOf(this.address);
+                    this.tokenInfo.balance = ethers.utils.formatUnits(balance, this.tokenInfo.decimals);
+                },
+                clickAddUser() {
+                    this.addUsersList = "";
+                    this.sendAmount = 0;
+                    this.isAddActive = !this.isAddActive;
+                },
+                saveUsers() {
+                    if (this.sendAmount < 1) {
+                        alert("请输入正确金额");
+                        return;
+                    }
+                    this.addUsersList
+                        .split("\n")
+                        // 去重
+                        .filter((v, i, a) => a.indexOf(v) === i).forEach((address) => {
+                            var address = address.trim();
+                            if (ethers.utils.isAddress(address)) {
+                                let upIndex = this.sendUsers.findIndex(item => item.address === address);
+                                if (this.sendUsers.findIndex(item => item.address === address) == -1) {
+                                    this.sendUsers.push({
+                                        address: address,
+                                        amount: this.sendAmount
+                                    })
+                                } else {
+                                    this.sendUsers.splice(upIndex, 1, {
+                                        address: address,
+                                        amount: this.sendAmount
+                                    })
+                                }
+
+
+                            }
+                        });
+                    this.clickAddUser();
+                },
+                delUser(index) {
+                    this.sendUsers.splice(index, 1);
+                    // this.$forceUpdate()//强制重新渲染视图就行了
+                },
+                async approveToken() {
+                    let tx = await this.tokenContract.approve(this.networkInfo.batchAddress, ethers.constants.MaxUint256);
+                    await tx.wait();
+                },
+                async send() {
+                    if (this.networkInfo.batchAddress == ethers.constants.AddressZero) {
+                        alert("请先部署并配置对应主网的转账合约");
+                        return
+                    }
+
+                    if (this.usdRate < 1) {
+                        alert("汇率错误");
+                        return
+                    }
+
+                    if (this.tokenInfo.decimals < 1) {
+                        alert("获取代币信息失败");
+                        return
+                    }
+
+                    const users = [];
+                    const amounts = [];
+
+                    let cnyCount = 0;
+                    let usdtCount = 0;
+
+                    this.sendUsers.forEach(item => {
+                        if (item.amount > 0) {
+                            users.push(item.address);
+                            let amount = ethers.utils.parseUnits((item.amount / this.usdRate).toString(), this.tokenInfo.decimals);
+                            amounts.push(amount);
+
+                            cnyCount += item.amount / 1;
+                            usdtCount += amount / 1;
+                            console.log(amount.toString());
+                        }
+                    })
+                    if (users.length != amounts.length) {
+                        alert("地址列表错误");
+                        return
+                    }
+
+                    usdtCount = ethers.utils.formatUnits(usdtCount.toString(), this.tokenInfo.decimals)
+                    var r = confirm(`请确认数据:\n
+                    共计${users.length}个地址\n
+                    共计${cnyCount}元\n
+                    共计${usdtCount} ${this.tokenInfo.symbol}\n
+                    `);
+                    if (r != true) {
+                        return;
+                    }
+                    // this.tokenContract approve
+                    const contract = new ethers.Contract(this.networkInfo.tokenAddress, batchAbi, this.signer);
+                    let tx = await contract.transferToken(this.networkInfo.tokenAddress, users, amounts);
+                    await tx.wait();
+                },
+            },
+        });
+    </script>
+</body>
+
+</html>

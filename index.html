@@ -110,6 +110,7 @@
                                 <thead>
                                     <tr>
                                         <th>序号</th>
+                                        <th>备注</th>
                                         <th>接收地址</th>
                                         <th>价值/CNY</th>
                                         <th>数量</th>
@@ -119,6 +120,9 @@
                                 <tbody>
                                     <tr v-for="(item, key) in sendUsers" :key="key">
                                         <td>{{key+1}}</td>
+                                        <td>
+                                            <input class="input is-small" required v-model="item.name" />
+                                        </td>
                                         <td>
                                             {{item.address}}
                                         </td>
@@ -418,12 +422,13 @@
                                 if (this.sendUsers.findIndex(item => item.address === address) == -1) {
                                     this.sendUsers.push({
                                         address: address,
-                                        amount: this.sendAmount
+                                        amount: this.sendAmount,
+                                        name: "",
                                     })
                                 } else {
                                     this.sendUsers.splice(upIndex, 1, {
                                         address: address,
-                                        amount: this.sendAmount
+                                        amount: this.sendAmount,
                                     })
                                 }
 
